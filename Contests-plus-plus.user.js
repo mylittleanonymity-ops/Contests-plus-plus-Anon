@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Contests++
 // @namespace    http://tampermonkey.net/
-// @version      1.0.4
+// @version      2.0.0
 // @description  Better contests with more information displayed, features, and tighter layout
 // @author       infarctus
 // @license      GPL-3.0
@@ -20,6 +20,7 @@
 // @grant        GM_addStyle
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_deleteValue
 // ==/UserScript==
 
 (function () {
@@ -28,7 +29,8 @@
         console.error("no jquerry");
         return;
     }
-    const CONTEST_ACTIONS_PREFIX_KEY = "Actions : ";
+    const OLD_CONTEST_ACTIONS_PREFIX_KEY = "Actions : ";
+    const CONTEST_ACTIONS_PREFIX_KEY = "Actions v2 : ";
     const INIT_PERMANENT_SETTINGS_KEY = "initPermanentSettings";
     const COLOR_POSITIVE_KEY = "colorPositive";
     const COLOR_NEGATIVE_KEY = "colorNegative";
@@ -45,6 +47,7 @@
     let positiveNegativeStyle; // stores the div for the positive and negative colors css
     let lockedRewardsStyle; // stores the div for the hidden claim rewards
     let tighterContestViewStyle; // stores the div for the tighter lead table css
+
 
     function initPermanentSettingsDefault() {
         GM_setValue(INIT_PERMANENT_SETTINGS_KEY, true);
@@ -177,11 +180,16 @@
 
         playersinformationGlobal = handleContestPeople($contestpeople, $currplayer);
 
-        currentconteststoragekeyGlobal =
-            CONTEST_ACTIONS_PREFIX_KEY + currshowedcontestname;
 
         // if not owexists updates the storage to implement them
-        updateCurrentStorageIfNotExist(currentconteststoragekeyGlobal);
+        const currActiveContest =
+              contests.active.find(a => a.id_contest == currentcontestIDGlobal) !== undefined
+        ? contests.active.find(a => a.id_contest == currentcontestIDGlobal)
+        : contests.finished.find(a => a.id_contest == currentcontestIDGlobal)
+
+        updateCurrentStorageIfNotExist(currshowedcontestname,currActiveContest);
+
+        currentconteststoragekeyGlobal = CONTEST_ACTIONS_PREFIX_KEY + currshowedcontestname
 
         if (!forcereloadfromupdate) {
             generateObjectiveToggling(
@@ -191,7 +199,11 @@
             );
             handleWeirdObjectives(currentcontestIDGlobal);
         }
-
+        if(forcereloadfromupdate){
+             $(".BC-custom-objectives-table")
+                    .not("[style*='display: none']")
+                    .remove();
+        }
         generateCustomObjectives(
             currplayerindexGlobal,
             playersinformationGlobal,
@@ -208,9 +220,7 @@
                 .find("button")
                 .off("click.handleGivingMoney")
                 .on("click.handleGivingMoney", function () {
-                $(".BC-custom-objectives-table")
-                    .not("[style*='display: none']")
-                    .remove(); // removes current custom objective
+                 // removes current custom objective
                 const observer = new MutationObserver(() => {
                     observer.disconnect();
                     handleContest(true);
@@ -423,7 +433,7 @@
             .filter(".cont_points_number")
             .text()
             .replace(/\D/g, '')
-        ,10);
+            ,10);
         const currplayerid = parseInt($currplayer.attr("sorting_id"), 10);
 
         let playersinformation = [];
@@ -439,7 +449,7 @@
                 .filter(".cont_points_number")
                 .text()
                 .replace(/\D/g, '')
-            ,10);
+                ,10);
 
             // Add points display to table
             $(this).find("td").eq(1).after(handleShowingPoint(points, currpoints));
@@ -497,26 +507,43 @@
             return `<td class="contestspluspluspositive">+${stringtoshow}</td>`;
         }
     }
-    function updateCurrentStorageIfNotExist(currentconteststoragekey) {
+    function updateCurrentStorageIfNotExist(currshowedcontestname,currActiveContest) {
+        const oldContestStorageKey = OLD_CONTEST_ACTIONS_PREFIX_KEY + currshowedcontestname
+        let oldContestStored; // For porting to v2
+
+        if(GM_getValue(oldContestStorageKey, false)){
+            oldContestStored = GM_getValue(oldContestStorageKey)
+            GM_deleteValue(oldContestStorageKey)
+        }
+        const currentconteststoragekey = CONTEST_ACTIONS_PREFIX_KEY + currshowedcontestname
         if (GM_getValue(currentconteststoragekey, false)) {
             return;
         } // returns if exists
-        const $objectives = $(".contest_body.show .contest_objectives > div");
-        const objectivesData = [];
-        $objectives.each(function () {
-            const $this = $(this);
-            const descText = getDescriptionFrom$objectivediv($this); // Text from obj_desc
-            const valuegiven = parseFormattedNumber(
-                $this.find(".points").text().trim()
-            ); // Text from obj_info
 
-            objectivesData.push({
-                action: descText,
-                pointsPerAction: valuegiven,
-                activated: $objectives.length <= 4 ? true : false, // if there's too many don't set them to true
-            });
-        });
+        const objectivesData = [];
+        const defaultActivation = currActiveContest.objectives.length <= 4 ? true : false; // if there's too many don't set them to true
+        let donationcount = 0;
+        currActiveContest.objectives.forEach((objective,index) => {
+            if(objective.identifier === "donate_sc"){
+                donation_amounts.forEach((amount,index2) => {
+                    objectivesData.push({
+                        action: objective.name+" "+number_reduce(amount),
+                        pointsPerAction: amount/sc_base,
+                        activated: oldContestStored === undefined ? defaultActivation : oldContestStored[(index+index2)].activated ,
+                    })
+                })
+                donationcount = 2; // not 3 due to index increasing
+            }
+            else{
+                objectivesData.push({
+                    action: objective.name,
+                    pointsPerAction: objective[currActiveContest.objective_key+"_points"],
+                    activated: oldContestStored === undefined ? defaultActivation : oldContestStored[(index+donationcount)].activated,
+                })
+            }
+        })
         GM_setValue(currentconteststoragekey, objectivesData);
+        return;
     }
     function getDescriptionFrom$objectivediv($objectivediv) {
         const basicdesctext = $objectivediv.find(".obj_desc").text().trim();
