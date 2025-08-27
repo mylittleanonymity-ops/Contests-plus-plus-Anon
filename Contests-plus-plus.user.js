@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Contests++
 // @namespace    http://tampermonkey.net/
-// @version      2.0.0
+// @version      2.1.0
 // @description  Better contests with more information displayed, features, and tighter layout
 // @author       infarctus
 // @license      GPL-3.0
@@ -42,6 +42,8 @@
     const TOP10_SHOWN_KEY = "top10Shown";
     const TOP25_SHOWN_KEY = "top25Shown";
     const TIGHTER_CONTEST_VIEW_KEY = "tighterContestView";
+
+    const currentContestStoredVersion = 1;
 
     let computedContestID = []; // stores already done contests
     let positiveNegativeStyle; // stores the div for the positive and negative colors css
@@ -241,7 +243,7 @@
             const descText = $this.find(".obj_desc").text().trim();
 
             // Find matching objective in storage
-            const objective = objectivesinfo[counter];
+            const objective = objectivesinfo.objectives[counter];
             counter++;
             if (!objective) return;
 
@@ -296,7 +298,7 @@
         const $currcontest = $(
             ".left_part .contest > .contest_header_active"
         ).parent();
-        const objectives = GM_getValue(currentconteststoragekey, []);
+        const objectives = GM_getValue(currentconteststoragekey, []).objectives;
 
         const hasActivatedObjective = objectives.some(
             (obj) => obj.activated === true
@@ -509,16 +511,21 @@
     }
     function updateCurrentStorageIfNotExist(currshowedcontestname,currActiveContest) {
         const oldContestStorageKey = OLD_CONTEST_ACTIONS_PREFIX_KEY + currshowedcontestname
-        let oldContestStored; // For porting to v2
+        let oldContestStored;
+        let isoldContestStoredV2 = false;
 
         if(GM_getValue(oldContestStorageKey, false)){
             oldContestStored = GM_getValue(oldContestStorageKey)
             GM_deleteValue(oldContestStorageKey)
         }
         const currentconteststoragekey = CONTEST_ACTIONS_PREFIX_KEY + currshowedcontestname
-        if (GM_getValue(currentconteststoragekey, false)) {
+        if (GM_getValue(currentconteststoragekey, false) && GM_getValue(currentconteststoragekey, []).version === currentContestStoredVersion) {
             return;
         } // returns if exists
+        if(GM_getValue(currentconteststoragekey, false) && GM_getValue(currentconteststoragekey, []).version && GM_getValue(currentconteststoragekey, []).version !== currentContestStoredVersion){
+            oldContestStored = GM_getValue(currentconteststoragekey)
+            isoldContestStoredV2 = true;
+        }
 
         const objectivesData = [];
         const defaultActivation = currActiveContest.objectives.length <= 4 ? true : false; // if there's too many don't set them to true
@@ -529,7 +536,7 @@
                     objectivesData.push({
                         action: objective.name+" "+number_reduce(amount),
                         pointsPerAction: amount/sc_base,
-                        activated: oldContestStored === undefined ? defaultActivation : oldContestStored[(index+index2)].activated ,
+                        activated: oldContestStored === undefined ? defaultActivation : isoldContestStoredV2 ? oldContestStored.objectives[(index+index2)].activated : oldContestStored[(index+index2)].activated ,
                     })
                 })
                 donationcount = 2; // not 3 due to index increasing
@@ -537,12 +544,16 @@
             else{
                 objectivesData.push({
                     action: objective.name,
-                    pointsPerAction: objective[currActiveContest.objective_key+"_points"],
-                    activated: oldContestStored === undefined ? defaultActivation : oldContestStored[(index+donationcount)].activated,
+                    pointsPerAction: objective[currActiveContest.objective_key+"_points"] || 1, // you seriously putting null when it's 1
+                    activated: oldContestStored === undefined ? defaultActivation : isoldContestStoredV2 ? oldContestStored.objectives[(index+donationcount)].activated : oldContestStored[(index+donationcount)].activated ,
                 })
             }
         })
-        GM_setValue(currentconteststoragekey, objectivesData);
+        const contestStored = {
+            version : currentContestStoredVersion,
+            objectives : objectivesData
+        }
+        GM_setValue(currentconteststoragekey, contestStored);
         return;
     }
     function getDescriptionFrom$objectivediv($objectivediv) {
