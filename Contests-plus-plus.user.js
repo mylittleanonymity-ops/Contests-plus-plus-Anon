@@ -40,7 +40,9 @@
     const FIRST_SHOWN_KEY = "firstShown";
     const TOP4_SHOWN_KEY = "top4Shown";
     const TOP10_SHOWN_KEY = "top10Shown";
+    const TOP15_SHOWN_KEY = "top15Shown";
     const TOP25_SHOWN_KEY = "top25Shown";
+    const TOP30_SHOWN_KEY = "top30Shown";
     const TIGHTER_CONTEST_VIEW_KEY = "tighterContestView";
 
     const currentContestStoredVersion = 1;
@@ -309,7 +311,9 @@
             { key: FIRST_SHOWN_KEY, index: 0, label: "1st" },
             { key: TOP4_SHOWN_KEY, index: 3, label: "Top 4" },
             { key: TOP10_SHOWN_KEY, index: 9, label: "Top 10" },
-            { key: TOP25_SHOWN_KEY, index: 24, label: "Top 25" },
+            { key: TOP15_SHOWN_KEY, index: 24, label: "Top 15" },
+            { key: TOP25_SHOWN_KEY, index: 30, label: "Top 25" },
+            { key: TOP30_SHOWN_KEY, index: 36, label: "Top 30" },
         ];
 
         const activePositions = positions.filter((pos) =>
@@ -990,12 +994,32 @@ margin-top: 3rem!important;
                         }
                     },
                     {
+                        key: TOP15_SHOWN_KEY,
+                        title: "Show Top 15",
+                        type: "checkbox",
+                        default: false,
+                        callback: (value) => {
+                            GM_setValue(TOP15_SHOWN_KEY, value);
+                            refreshObjectivesTable();
+                        }
+                    },
+                    {
                         key: TOP25_SHOWN_KEY,
                         title: "Show Top 25",
                         type: "checkbox",
                         default: false,
                         callback: (value) => {
                             GM_setValue(TOP25_SHOWN_KEY, value);
+                            refreshObjectivesTable();
+                        }
+                    },
+                    {
+                        key: TOP30_SHOWN_KEY,
+                        title: "Show Top 30",
+                        type: "checkbox",
+                        default: false,
+                        callback: (value) => {
+                            GM_setValue(TOP30_SHOWN_KEY, value);
                             refreshObjectivesTable();
                         }
                     }
