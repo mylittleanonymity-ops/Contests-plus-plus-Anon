@@ -314,8 +314,8 @@
             { key: TOP4_SHOWN_KEY, index: 3, label: "Top 4" },
             { key: TOP10_SHOWN_KEY, index: 9, label: "Top 10" },
             { key: TOP25_SHOWN_KEY, index: 24, label: "Top 25" },
-            { key: TOP15_SHOWN_KEY, index: 30, label: "Top 15" },
-            { key: TOP30_SHOWN_KEY, index: 36, label: "Top 30" },
+            { key: TOP15_SHOWN_KEY, index: 14, label: "Top 15" },
+            { key: TOP30_SHOWN_KEY, index: 29, label: "Top 30" },
         ];
 
         const activePositions = positions.filter((pos) =>
