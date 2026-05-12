@@ -41,8 +41,6 @@
     const TOP4_SHOWN_KEY = "top4Shown";
     const TOP10_SHOWN_KEY = "top10Shown";
     const TOP25_SHOWN_KEY = "top25Shown";
-    const TOP15_SHOWN_KEY = "top15Shown";
-    const TOP30_SHOWN_KEY = "top30Shown";
     const TIGHTER_CONTEST_VIEW_KEY = "tighterContestView";
 
     const currentContestStoredVersion = 1;
@@ -68,8 +66,6 @@
         GM_setValue(TOP30_SHOWN_KEY, false);
         GM_setValue(TIGHTER_CONTEST_VIEW_KEY,true);
     }
-
-
 
     function run1TimeAtScriptStart(){
         GM_addStyle(essentialStyle);
@@ -150,6 +146,12 @@
 
     let currentcontestIDGlobal,currplayerindexGlobal,playersinformationGlobal,currentconteststoragekeyGlobal;
 
+    // Helper function to call the current active contest
+    function getCurrActiveContest() {
+         return contests.active.find(x => x.id_contest == currentcontestIDGlobal) ||
+             contests.finished.find(x => x.id_contest == currentcontestIDGlobal);
+     }
+    
     function handleContest(forcereloadfromupdate = false) {
         currentcontestIDGlobal = $(".contest_header_active")
             .parent()
@@ -213,7 +215,8 @@
         generateCustomObjectives(
             currplayerindexGlobal,
             playersinformationGlobal,
-            currentconteststoragekeyGlobal
+            currentconteststoragekeyGlobal,
+            currActiveContest
         );
     }
     function handleWeirdObjectives(currentcontestID) {
@@ -284,12 +287,13 @@
                 generateCustomObjectives(
                     currplayerindex,
                     playersinformation,
-                    currentconteststoragekey
+                    currentconteststoragekey,
+                    getCurrActiveContest()
                 );
             });
         });
     }
-    function generateCustomObjectives(currplayerindex,playersinformation,currentconteststoragekey) {
+    function generateCustomObjectives(currplayerindex,playersinformation,currentconteststoragekey, currActiveContest) {
         const $currentcontestheader = $(
             ".left_part .contest > .contest_header_active"
         );
@@ -309,13 +313,14 @@
         );
 
         // Define positions to show based on settings
+        const pullBrackets = Object.keys(currActiveContest.rewards).map(Number).sort((x, y) => x - y);
+        const third_bracket_index = pullBrackets[2] - 1;
+        const fourth_bracket_index = pullBrackets[3] - 1;
         const positions = [
             { key: FIRST_SHOWN_KEY, index: 0, label: "1st" },
             { key: TOP4_SHOWN_KEY, index: 3, label: "Top 4" },
-            { key: TOP10_SHOWN_KEY, index: 9, label: "Top 10" },
-            { key: TOP25_SHOWN_KEY, index: 24, label: "Top 25" },
-            { key: TOP15_SHOWN_KEY, index: 14, label: "Top 15" },
-            { key: TOP30_SHOWN_KEY, index: 29, label: "Top 30" },
+            { key: TOP10_SHOWN_KEY, index: third_bracket_index, label: `Top ${third_bracket_index+1}` },
+            { key: TOP25_SHOWN_KEY, index: fourth_bracket_index, label: `Top ${fourth_bracket_index+1}` }
         ];
 
         const activePositions = positions.filter((pos) =>
@@ -987,7 +992,7 @@ margin-top: 3rem!important;
                     },
                     {
                         key: TOP10_SHOWN_KEY,
-                        title: "Show Top 10",
+                        title: "Show Top 10/15",
                         type: "checkbox",
                         default: false,
                         callback: (value) => {
@@ -997,31 +1002,11 @@ margin-top: 3rem!important;
                     },
                     {
                         key: TOP25_SHOWN_KEY,
-                        title: "Show Top 25",
+                        title: "Show Top 25/30",
                         type: "checkbox",
                         default: false,
                         callback: (value) => {
                             GM_setValue(TOP25_SHOWN_KEY, value);
-                            refreshObjectivesTable();
-                        }
-                    },
-                    {
-                        key: TOP15_SHOWN_KEY,
-                        title: "Show Top 15",
-                        type: "checkbox",
-                        default: false,
-                        callback: (value) => {
-                            GM_setValue(TOP15_SHOWN_KEY, value);
-                            refreshObjectivesTable();
-                        }
-                    },
-                    {
-                        key: TOP30_SHOWN_KEY,
-                        title: "Show Top 30",
-                        type: "checkbox",
-                        default: false,
-                        callback: (value) => {
-                            GM_setValue(TOP30_SHOWN_KEY, value);
                             refreshObjectivesTable();
                         }
                     }
@@ -1124,7 +1109,8 @@ margin-top: 3rem!important;
                 generateCustomObjectives(
                     currplayerindexGlobal,
                     playersinformationGlobal,
-                    currentconteststoragekeyGlobal
+                    currentconteststoragekeyGlobal,
+                    getCurrActiveContest()
                 );
             }
         }
