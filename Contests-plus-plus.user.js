@@ -62,8 +62,6 @@
         GM_setValue(TOP4_SHOWN_KEY, true);
         GM_setValue(TOP10_SHOWN_KEY, false);
         GM_setValue(TOP25_SHOWN_KEY, false);
-        GM_setValue(TOP15_SHOWN_KEY, false);
-        GM_setValue(TOP30_SHOWN_KEY, false);
         GM_setValue(TIGHTER_CONTEST_VIEW_KEY,true);
     }
 
